@@ -1,6 +1,6 @@
 %Parameters
 
-N = 6;
+N = 5;
 dim = 1;
 
 %Create an undirected, acyclic and connected graph
@@ -14,7 +14,7 @@ for i=2:N
 end
 
 G = graph(A);
-plot(G);graph(A)
+% plot(G);
 
 % Compute the matrices associated with the graph
 D = diag(sum(A));
@@ -72,3 +72,4 @@ end
 y_inf = sol(end, 1:dim*N)';
 beta_ad_inf=(trapz(-sol(:, dim*N+1:2*dim*N), 1)*dt)' + beta_ad0;
 beta_estimate = beta_ad_inf - y_inf;
+display(['The error in the bias estimate is ', num2str(norm(beta_estimate - beta))])
