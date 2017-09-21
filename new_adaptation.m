@@ -1,9 +1,7 @@
 %Parameters
 
-global N dim lam T;
-
 N = 6;
-dim = 3;
+dim = 1;
 
 %Create an undirected, acyclic and connected graph
 A = zeros(N);
@@ -14,7 +12,7 @@ for i=2:N
     A(i, s2(id)) = 1;
     A(s2(id), i) = 1;
 end
-% A = [0 1 0 0 0; 1 0 1 0 0; 0 1 0 1 1; 0 0 1 0 0; 0 0 1 0 0];
+
 G = graph(A);
 plot(G);graph(A)
 
@@ -28,8 +26,7 @@ beta = rand(dim*N, 1) - 0.5;
 
 % Initialize the positions, velocities and control inputs randomly
 pos0 = 10 * rand(dim*N, 1) - 5;
-% pos0(end-dim+1:end) = 1;
-vel0 = 1*rand(dim*N, 1) - 0.5;
+vel0 = 1 * rand(dim*N, 1) - 0.5;
 beta_ad0 = rand(dim*N, 1) - 0.5;
 y0 = lam*pos0;
 
@@ -46,9 +43,9 @@ T(1:dim*N, dim*N+1:2*dim*N) = lam;
 
 % Solving the equations using ode45
 auton = @(t, x) T*x;
-init_cond = [y0, vel0, beta_t0];
+init_cond = [y0', vel0', beta_t0']';
 
-tmax = 10; nTime = 100; dt = tmax/nTime; 
+tmax = 50; nTime = 5000; dt = tmax/nTime; 
 t = linspace(0, tmax, nTime);
 [t, sol] = ode45(@(t, x)auton(t,x), t, init_cond);
 
@@ -61,15 +58,17 @@ end
 
 % Plotting the results
 figure;
-% plot(t, sol(:, 1:dim:dim*N));
-% ylabel('y')
-% figure;
 plot(t, sol(:, dim*N+1:dim:2*dim*N));
 ylabel('velocity')
-figure;
 for i=1:dim
     figure;
     plot(t, pos(:, i:dim:end))
     str = sprintf('x%d position',i);
     title(str)
 end
+
+% Computing the bias
+% y(inf) = -beta_t(inf). So, beta = beta_ad(inf) - y(inf)
+y_inf = sol(end, 1:dim*N)';
+beta_ad_inf=(trapz(-sol(:, dim*N+1:2*dim*N), 1)*dt)' + beta_ad0;
+beta_estimate = beta_ad_inf - y_inf;
