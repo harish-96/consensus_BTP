@@ -2,6 +2,7 @@
 
 N = 5;
 dim = 3;
+alpha = 30*eye(dim*N);
 
 %Create an undirected, acyclic and connected graph
 A = zeros(N);
@@ -28,22 +29,25 @@ beta = rand(dim*N, 1) - 0.5;
 pos0 = 10 * rand(dim*N, 1) - 5;
 vel0 = 1 * rand(dim*N, 1) - 0.5;
 beta_ad0 = rand(dim*N, 1) - 0.5;
+u_r0 = rand(dim*N, 1) - 0.5;
 y0 = lam*pos0;
 
 % Error in initial parameter estimates: Tilde quantities
-beta_t0 = beta - beta_ad0;
+b_0 = (lam+alpha)*(beta - beta_ad0);
 
 % Setting up the matrix differential equation. dX/dt = T*X
-%(y, vel, beta_t)
-T = kron([0 1 0;
-          -1 -1 -1;
-          0 1 0], eye(dim*N));
+%(y, vel, beta_t, u_r)
+T = kron([0 1 0 0;
+          -1 -2 -1 1;
+          0 1 -1 0\78978\9;
+          0 -1 0 -1], eye(dim*N));
 
-T(1:dim*N, dim*N+1:2*dim*N) = lam;
+T(1:dim*N, dim*N+1:2*dim*N) = lam + alpha;
+% T(end-dim*N+1:end, dim*N+1:2*dim*N) = -(lam + alpha);
 
 % Solving the equations using ode45
 auton = @(t, x) T*x;
-init_cond = [y0', vel0', beta_t0']';
+init_cond = [y0', vel0', b_0', u_r0']';
 
 tmax = 50; nTime = 5000; dt = tmax/nTime; 
 t = linspace(0, tmax, nTime);
@@ -58,7 +62,7 @@ end
 
 % Plotting the results
 figure;
-plot(t, sol(:, 1:dim:dim*N)+sol(:, 2*dim*N+1:dim:3*dim*N));
+plot(t, sol(:, 1:dim:dim*N))%+sol(:, 2*dim*N+1:dim:3*dim*N));
 ylabel('y+$\widetilde\beta$', 'Interpreter', 'latex')
 figure;
 plot(t, sol(:, dim*N+1:dim:2*dim*N))

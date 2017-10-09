@@ -1,5 +1,5 @@
 %Parameters
-
+global N dim lam T D;
 N = 5;
 dim = 3;
 
@@ -34,12 +34,13 @@ y0 = lam*pos0;
 beta_t0 = beta - beta_ad0;
 
 % Setting up the matrix differential equation. dX/dt = T*X
-%(y, vel, beta_t)
+%(xi, vel, beta_t)
 T = kron([0 1 0;
           -1 -1 -1;
           0 1 0], eye(dim*N));
-
-T(1:dim*N, dim*N+1:2*dim*N) = lam;
+T(dim*N+1:2*dim*N, 1:dim*N) = -lam;
+T(dim*N+1:2*dim*N, 2*dim*N+1:3*dim*N) = -kron(D, eye(dim));
+T(2*dim*N+1:3*dim*N, dim*N+1:2*dim*N) = kron(D, eye(dim));
 
 % Solving the equations using ode45
 auton = @(t, x) T*x;
@@ -48,6 +49,7 @@ init_cond = [y0', vel0', beta_t0']';
 tmax = 50; nTime = 5000; dt = tmax/nTime; 
 t = linspace(0, tmax, nTime);
 [t, sol] = ode45(@(t, x)auton(t,x), t, init_cond);
+% [t, sol] = ode45(@(t, x)non_auton_one_var(t,x), t, init_cond);
 
 % Computing the positions from the velocity history
 pos = zeros(nTime, dim*N);
@@ -58,8 +60,8 @@ end
 
 % Plotting the results
 figure;
-plot(t, sol(:, 1:dim:dim*N)+sol(:, 2*dim*N+1:dim:3*dim*N));
-ylabel('y+$\widetilde\beta$', 'Interpreter', 'latex')
+plot(t, L*sol(:, 1:dim:dim*N)'+D*sol(:, 2*dim*N+1:dim:3*dim*N)');
+ylabel('$\Lambda\xi+\Delta\widetilde\beta$', 'Interpreter', 'latex')
 figure;
 plot(t, sol(:, dim*N+1:dim:2*dim*N))
 ylabel('velocity')
@@ -71,8 +73,10 @@ for i=1:dim
 end
 
 % Computing the bias
-% y(inf) = -beta_t(inf). So, beta = beta_ad(inf) - y(inf)
-y_inf = sol(end, 1:dim*N)';
-beta_ad_inf=(trapz(-sol(:, dim*N+1:2*dim*N), 1)*dt)' + beta_ad0;
-beta_estimate = beta_ad_inf - y_inf;
+% y(inf) = -beta_t(inf). So, \Delta beta = \Delta beta_ad(inf) - y(inf)
+
+y_inf = lam * sol(end, 1:dim*N)';
+beta_ad_inf = trapz(kron(D, eye(dim))*-sol(:, dim*N+1:2*dim*N)', 2)*dt + beta_ad0;
+beta_estimate = beta_ad_inf - kron(diag(1./diag(D)), eye(dim))*y_inf;
+
 display(['The error in the bias estimate is ', num2str(norm(beta_estimate - beta))])

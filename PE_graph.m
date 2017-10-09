@@ -1,5 +1,7 @@
 %Parameters
 
+global N dim freqs A;
+
 N = 5;
 dim = 3;
 
@@ -17,6 +19,7 @@ G = graph(A);
 plot(G);
 
 % Compute the matrices associated with the graph
+freqs = 5*rand(N,N)*2*pi;
 D = diag(sum(A));
 L = D - A;
 lam = kron(L, eye(dim));
@@ -28,26 +31,18 @@ beta = rand(dim*N, 1) - 0.5;
 pos0 = 10 * rand(dim*N, 1) - 5;
 vel0 = 1 * rand(dim*N, 1) - 0.5;
 beta_ad0 = rand(dim*N, 1) - 0.5;
-y0 = lam*pos0;
+% y0 = lam*pos0;
 
 % Error in initial parameter estimates: Tilde quantities
 beta_t0 = beta - beta_ad0;
 
-% Setting up the matrix differential equation. dX/dt = T*X
-%(y, vel, beta_t)
-T = kron([0 1 0;
-          -1 -1 -1;
-          0 1 0], eye(dim*N));
-
-T(1:dim*N, dim*N+1:2*dim*N) = lam;
-
 % Solving the equations using ode45
-auton = @(t, x) T*x;
-init_cond = [y0', vel0', beta_t0']';
+% auton = @(t, x) T*x;
+init_cond = [pos0', vel0', beta_t0']';
 
-tmax = 50; nTime = 5000; dt = tmax/nTime; 
-t = linspace(0, tmax, nTime);
-[t, sol] = ode45(@(t, x)auton(t,x), t, init_cond);
+tmax = 1000; nTime = 10000; dt = tmax/nTime; 
+tvals = linspace(0, tmax, nTime);
+[tvals, sol] = ode45(@(t1, x)non_auton_one_var(t1,x), tvals, init_cond);
 
 % Computing the positions from the velocity history
 pos = zeros(nTime, dim*N);
@@ -58,20 +53,21 @@ end
 
 % Plotting the results
 figure;
-plot(t, sol(:, 1:dim:dim*N)+sol(:, 2*dim*N+1:dim:3*dim*N));
+plot(tvals, sol(:, 1:dim:dim*N)+sol(:, 2*dim*N+1:dim:3*dim*N));
 ylabel('y+$\widetilde\beta$', 'Interpreter', 'latex')
 figure;
-plot(t, sol(:, dim*N+1:dim:2*dim*N))
+plot(tvals, sol(:, dim*N+1:dim:2*dim*N))
 ylabel('velocity')
 for i=1:dim
     figure;
-    plot(t, pos(:, i:dim:end))
+    plot(tvals, pos(:, i:dim:end))
     str = sprintf('x%d position',i);
     title(str)
 end
 
 % Computing the bias
 % y(inf) = -beta_t(inf). So, beta = beta_ad(inf) - y(inf)
+
 y_inf = sol(end, 1:dim*N)';
 beta_ad_inf=(trapz(-sol(:, dim*N+1:2*dim*N), 1)*dt)' + beta_ad0;
 beta_estimate = beta_ad_inf - y_inf;
