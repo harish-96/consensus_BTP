@@ -5,7 +5,7 @@ import networkx as nx
 
 dim = 1
 N = 5
-alpha = 0 * np.eye(N)
+alpha = 1 * np.eye(N)
 beta_order = 1
 pos_order = 100
 vel_order = 10
@@ -50,19 +50,10 @@ init_cond = np.concatenate([pos0, vel0, beta])
 time = np.linspace(0, 100, 1000)
 sol = odeint(diffeq, init_cond, time)
 
-for i in range(dim):
-    plt.figure()
-    plt.plot(time, sol[:, i:N*dim:dim], linewidth=0.8)
-    plt.ylabel('pos'+str(i))
-    plt.xlabel('time')
-    plt.savefig('pos_secondadaptation.png')
-
+zeta = sol[:, N*dim:2*N*dim:dim]
+betatilde = sol[:, 2*N*dim:3*N*dim:dim]
 plt.figure()
-plt.plot(time, sol[:, N*dim:2*N*dim:dim], linewidth=0.8)
-plt.ylabel('velocity')
+plt.plot(time, (np.exp(-exp_order*time)-1)*np.dot(zeta, np.dot(betatilde, D).T), linewidth=0.8)
 plt.xlabel('time')
-plt.savefig('vel_secondadaptation.png')
-#plt.figure()
-#plt.plot(time, sol[:, 2*N*dim:3*N*dim:dim], linewidth=0.7)
-#plt.ylabel('x-beta')
+
 plt.show()
